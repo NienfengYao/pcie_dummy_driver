@@ -1,9 +1,9 @@
 DRIVER_NAME = pcie_dummy_drv
 obj-m := $(DRIVER_NAME).o
 
-all: kernel_module
+$(DRIVER_NAME)-objs := dummy_pcie_drv.o gti2801.o
 
-kernel_module: $(DRIVER_NAME).c
+all:
 	make -C /lib/modules/$(shell uname -r)/build M=$(shell pwd) modules
 
 clean:

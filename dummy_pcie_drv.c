@@ -12,6 +12,8 @@ MODULE_LICENSE("GPL v2");
 MODULE_VERSION(DRV_MODULE_VERSION);
 
 static struct class *dev_class=0;
+static int gInstance=0;
+static DEFINE_MUTEX(gti_mutex);
 
 static const struct pci_device_id pci_ids[] = {
         { PCI_DEVICE(0x10ee, 0x7014), },  //default xilinx ID
@@ -24,15 +26,49 @@ static const struct pci_device_id pci_ids[] = {
 MODULE_DEVICE_TABLE(pci, pci_ids);
 
 
-
 static void remove(struct pci_dev *pdev){
+	GTI_DEV * pDev=pci_get_drvdata(pdev);
+
 	printk("%s()\n", __func__);
+	if(pDev->exitFn) pDev->exitFn(pDev);
+	pci_release_regions(pdev);
+	pci_disable_msi(pdev);
+	pci_disable_device(pdev);
 }
 
 static int probe(struct pci_dev *pdev, const struct pci_device_id *id){
 	int rc = 0;
 
+	GTI_DEV * gti_dev;
 	printk("%s()\n", __func__);
+    gti_dev = kzalloc(sizeof(GTI_DEV), GFP_KERNEL);
+    if(!gti_dev) return -ENOMEM;
+    pci_set_drvdata(pdev, gti_dev);
+    gti_dev->pDev=pdev;
+    gti_dev->id=*id;
+    gti_dev->pClass=dev_class;
+    mutex_lock(&gti_mutex);
+    gti_dev->instance=gInstance++;
+    mutex_unlock(&gti_mutex);
+
+    printk("%s()\n", __func__);
+    printk("id: (%x, %x, %x, %x)\n", id->vendor, id->device, id->subvendor, id->subdevice);
+    printk("id: (%x, %x, %x, %x)\n", pdev->vendor, pdev->device, pdev->subsystem_vendor, pdev->subsystem_device);
+
+    rc = pci_enable_device(pdev);
+    pci_set_master(pdev);
+    //if(rc==0) rc = pci_enable_msi(pdev);
+    if(rc==0) rc = pcie_capability_set_word(pdev, PCI_EXP_DEVCTL, PCI_EXP_DEVCTL_RELAX_EN);
+    if(rc==0) rc = pci_request_regions(pdev, DRV_NAME);
+
+    gti_dev->initFn=gti2801_init;
+	gti_dev->exitFn=gti2801_remove;
+	rc=gti_dev->initFn(gti_dev);
+    if(rc!=0){
+        remove(pdev);
+        printk(KERN_ERR "Could not initialize PCI device, rc:%d\n",rc);
+        return -ENOMEM;
+    }
 	return rc;
 }
 
