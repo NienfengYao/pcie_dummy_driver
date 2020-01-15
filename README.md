@@ -1,6 +1,8 @@
 # PCIe Dummy Driver
   * We have a existed PCIe device. I use it to exercise a basic PCIe dummy driver. The probe() will be called if the PID/VID matched.
-
+  * Environment:
+    * aarch64 GNU/Linux
+    * uname -r, 4.14.0-19.913.1-be-arm64
 # Test the system calls to copy data between kernel and user space
 * Behavior:
   * AP read a binary file and write to device driver, 64KB/time.
