@@ -17,6 +17,9 @@
 #include "gti2801.h"
 
 #define virt_to_bus virt_to_phys
+#define BUF_LEN 64*1024
+
+static int total_num = 0;   /* The quantity that written in */
 
 static ssize_t show_gti_info(struct device *dev, struct device_attribute *attr, char *buf){
 	sprintf(buf,"%s()\n", __func__);
@@ -27,7 +30,8 @@ static DEVICE_ATTR(gti_info, S_IRUGO, show_gti_info, NULL);
 
 static int gti_open(struct inode *inode, struct file *file)
 {
-    printk("%s()\n", __func__);
+	printk("%s()\n", __func__);
+	total_num = 0;
 	return 0;
 }
 
@@ -39,21 +43,20 @@ static int gti_close(struct inode *inode, struct file *file)
 
 static ssize_t gti_read(struct file *file, char __user *buf, size_t count,loff_t *pos)
 {
-	int rc;
-	int ret=count;
-
     printk("%s()\n", __func__);
-	rc=copy_to_user(buf,"gti_read() test", 15);
-	if(rc!=0){printk(KERN_ERR "copy_to_user error.rc:%d\n",rc);	/*return -1;*/}
-	return ret;
+	return total_num;
 }
 
-static ssize_t gti_write(struct file *file, const char __user *buf,size_t count, loff_t *pos)
+static ssize_t gti_write(struct file *file, const char __user *buf, size_t count, loff_t *pos)
 {
-	int ret=count;
-
-    printk("%s()\n", __func__);
-	return ret;
+    printk("%s() count=%lu\n", __func__, count);
+    if (BUF_LEN >= count){
+        total_num += count;
+        return count;
+    }else {
+        printk ("Support maximum length = %d\n", BUF_LEN);
+        return -EINVAL;
+    }
 }
 
 const static struct file_operations gti_fops = {
@@ -93,7 +96,6 @@ int gti2801_init(void *gti_dev){
     pdev->private=fpga;
     rc = pci_enable_msi(pdev->pDev);
 
-    printk("Ryan: %s() pdev->pDev->irq=%d\n", __func__, pdev->pDev->irq);
     if(rc==0) rc = device_create_file(&pdev->pDev->dev, &dev_attr_gti_info);
     if(rc!=0){
         kfree(fpga);
