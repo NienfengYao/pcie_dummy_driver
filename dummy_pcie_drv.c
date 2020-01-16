@@ -18,16 +18,13 @@ static DEFINE_MUTEX(gti_mutex);
 static const struct pci_device_id pci_ids[] = {
         { PCI_DEVICE(0x10ee, 0x7014), },  //default xilinx ID
         { PCI_DEVICE(0x10ee, 0x7022), },  //default xilinx ID
-        { PCI_DEVICE(0x10ee, 0x7042), },  //default xilinx ID
-        { PCI_DEVICE(0x10ee, 0x7122), },
-        { PCI_DEVICE(0x1e00, 0x2803), },
         {0,}
 };
 MODULE_DEVICE_TABLE(pci, pci_ids);
 
 
 static void remove(struct pci_dev *pdev){
-	GTI_DEV * pDev=pci_get_drvdata(pdev);
+	NFY_DEV * pDev=pci_get_drvdata(pdev);
 
 	printk("%s()\n", __func__);
 	if(pDev->exitFn) pDev->exitFn(pDev);
@@ -38,17 +35,17 @@ static void remove(struct pci_dev *pdev){
 
 static int probe(struct pci_dev *pdev, const struct pci_device_id *id){
 	int rc = 0;
+	NFY_DEV * nfy_dev;
 
-	GTI_DEV * gti_dev;
 	printk("%s()\n", __func__);
-    gti_dev = kzalloc(sizeof(GTI_DEV), GFP_KERNEL);
-    if(!gti_dev) return -ENOMEM;
-    pci_set_drvdata(pdev, gti_dev);
-    gti_dev->pDev=pdev;
-    gti_dev->id=*id;
-    gti_dev->pClass=dev_class;
+    nfy_dev = kzalloc(sizeof(NFY_DEV), GFP_KERNEL);
+    if(!nfy_dev) return -ENOMEM;
+    pci_set_drvdata(pdev, nfy_dev);
+    nfy_dev->pDev=pdev;
+    nfy_dev->id=*id;
+    nfy_dev->pClass=dev_class;
     mutex_lock(&gti_mutex);
-    gti_dev->instance=gInstance++;
+    nfy_dev->instance=gInstance++;
     mutex_unlock(&gti_mutex);
 
     printk("%s()\n", __func__);
@@ -61,9 +58,9 @@ static int probe(struct pci_dev *pdev, const struct pci_device_id *id){
     if(rc==0) rc = pcie_capability_set_word(pdev, PCI_EXP_DEVCTL, PCI_EXP_DEVCTL_RELAX_EN);
     if(rc==0) rc = pci_request_regions(pdev, DRV_NAME);
 
-    gti_dev->initFn=gti2801_init;
-	gti_dev->exitFn=gti2801_remove;
-	rc=gti_dev->initFn(gti_dev);
+    nfy_dev->initFn=nfy2020_init;
+	nfy_dev->exitFn=nfy2020_remove;
+	rc=nfy_dev->initFn(nfy_dev);
     if(rc!=0){
         remove(pdev);
         printk(KERN_ERR "Could not initialize PCI device, rc:%d\n",rc);

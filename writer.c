@@ -13,7 +13,7 @@
 #define TIMES 300 
 #define FILE_NAME "test.bin"
 
-static char *dev_name = "/dev/gti2800-0";
+static char *dev_name = "/dev/nfy2020-0";
 
 static uint64_t time_in_ns()
 {

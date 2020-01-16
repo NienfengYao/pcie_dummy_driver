@@ -1,7 +1,7 @@
 DRIVER_NAME = pcie_dummy_drv
 obj-m := $(DRIVER_NAME).o
 
-$(DRIVER_NAME)-objs := dummy_pcie_drv.o gti2801.o
+$(DRIVER_NAME)-objs := dummy_pcie_drv.o nfy2020.o
 
 all: kernel_module writer
 
